@@ -1,0 +1,6 @@
+- Beam removing
+- Error handling
+- With game list of failed beams with messages should be returned
+- Doors
+- Alert about winning
+- Validate move
