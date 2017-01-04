@@ -7,11 +7,12 @@ import services.GameService
 class StateTest extends FunSuite with Matchers {
   test("Empty state should consist only of dots") {
     val emptyState = createState(5, 4, Seq.empty)
-    assert(emptyState.toString ==
+
+    emptyState should have('toString (
       """|*****
          |*****
          |*****
-         |*****""".stripMargin)
+         |*****""".stripMargin))
   }
 
   test("Elements displays as their chars") {
@@ -22,10 +23,10 @@ class StateTest extends FunSuite with Matchers {
       createConnector(2, 0)
     )
     val state = createState(3, 3, elems)
-    assert(state.toString ==
+    state should have('toString (
       """|#RB
          |*rb
-         |A**""".stripMargin)
+         |A**""".stripMargin))
   }
 
   test("Can't add beams to different colors") {
@@ -47,7 +48,7 @@ class StateTest extends FunSuite with Matchers {
     val reciver = createReciver(1, 1, Blue)
     val state = createState(2, 2, Seq(sender, connector, reciver))
 
-    assert(!state.isBeamExists(sender, connector))
+    state.isBeamExists(sender, connector) should be (false)
     state.addBeam(sender, connector)
     state.beams should have size 1
 
@@ -130,14 +131,14 @@ class StateTest extends FunSuite with Matchers {
     val targetReciever = createReciver(1, 1, Red, isTarget = true)
     val state = createState(3, 3, Seq(sender, connector, reciver, targetReciever))
 
-    assert(!state.isWinState)
+    state should have('isWinState (false))
 
     state.addBeam(sender, connector)
     state.addBeam(reciver, connector)
-    assert(!state.isWinState)
+    state should have('isWinState (false))
 
     state.addBeam(targetReciever, connector)
-    assert(state.isWinState)
+    state should have('isWinState (true))
   }
 
   test("Absent beams can intersect env") {
@@ -160,7 +161,7 @@ class StateTest extends FunSuite with Matchers {
     state.addBeam(reciver, connector2)
   }
 
-  test("Beams should propagate color to absent beams") {
+  test("Beams should propagate color to absent beams and back") {
     val sender = createSender(0, 0, Red)
     val connector1 = createConnector(0, 1)
     val connector2 = createConnector(0, 2)
@@ -172,13 +173,17 @@ class StateTest extends FunSuite with Matchers {
     state.addBeam(reciver, connector3)
     state.addBeam(connector2, connector3)
 
-    assert(!state.isWinState)
-    assert(state.beams.forall(_.color == Absent))
+    state should have('isWinState (false))
+    all(state.beams) should have('color (Absent))
 
-    state.addBeam(sender, connector1)
+    val bridgeBeam = state.addBeam(sender, connector1)
     state.addBeam(connector2, connector1)
-    assert(state.beams.forall(_.color == Red))
-    assert(state.isWinState)
+    all(state.beams) should have('color (Red))
+    state should have('isWinState (true))
+
+    state.removeBeam(bridgeBeam)
+    state should have('isWinState (false))
+    all(state.beams) should have('color (Absent))
   }
 
   test("Simple connect beam should have sender color") {
@@ -190,8 +195,28 @@ class StateTest extends FunSuite with Matchers {
 
     state.addBeam(sender, connector1)
     state.addBeam(reciver, connector1)
-    assert(state.beams.forall(_.color == Red))
-    assert(state.isWinState)
+    all(state.beams) should have('color (Red))
+    state should have('isWinState (true))
   }
+
+  test("Cycle problem should be solved") {
+    val sender = createSender(1, 0, Red)
+    val connector1 = createConnector(3, 2)
+    val connector2 = createConnector(3, 3)
+    val connector3 = createConnector(0, 2)
+    val reciver = createReciver(1, 4, Red, isTarget = true)
+    val state = createState(5, 5, Seq(sender, connector1, connector2, connector3, reciver))
+
+    state.addBeam(sender, connector1)
+    state.addBeam(connector1, connector2)
+    state.addBeam(reciver, connector2)
+
+    state.addBeam(sender, connector3)
+    state.addBeam(reciver, connector3)
+
+    all(state.beams) should have('color (Red))
+    state.beams should have size 5
+  }
+
 }
 

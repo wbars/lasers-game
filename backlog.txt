@@ -1,4 +1,4 @@
-- Beam removing
+- IT for gameservice
 - Error handling
 - With game list of failed beams with messages should be returned
 - Doors

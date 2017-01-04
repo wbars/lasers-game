@@ -87,27 +87,7 @@ class State(val width: Int, val height: Int, val elements: mutable.Map[(Int, Int
     .exists(e => e != beam.colored && e != beam.connector && isBeamIntersectsElement(e, beam)) ||
     beams.exists(b => b != beam && isBeamsIntersects(b, beam))
 
-  private def propagateColor(colored: Colored): Unit = {
-    val propagatedBeams = mutable.Set.empty[Beam]
-
-    def propagate(colored: Colored): Unit = colored match {
-      case c: Connector => c.beams
-        .filter(!propagatedBeams.contains(_))
-        .filter(_.color == Absent)
-        .foreach(beam => {
-          beam.updateColor()
-          propagatedBeams += beam
-
-          propagate(beam.colored)
-          propagate(beam.connector)
-        })
-      case _ =>
-    }
-
-    propagate(colored)
-  }
-
-  def addBeam(colored: Colored, connector: Connector) {
+  def addBeam(colored: Colored, connector: Connector): Beam = {
 
     def isBeamValid(beam: Beam): Boolean = {
       if (connector == colored) return false
@@ -121,15 +101,16 @@ class State(val width: Int, val height: Int, val elements: mutable.Map[(Int, Int
     val beam = Beam(colored, connector)(State.beamColor(colored, connector))
     if (isBeamValid(beam)) {
       addBeam(colored, connector, beam)
-      propagateColor(connector)
-      propagateColor(colored)
     }
+    beam
   }
 
   def removeBeam(beam: Beam) {
-    beam.colored.beams.remove(beam)
-    beam.connector.beams.remove(beam)
-    beams.remove(beam)
+    beam.colored.beams -= beam
+    beam.connector.beams -= beam
+    beams -= beam
+
+    reloadBeams()
   }
 
 
@@ -137,6 +118,8 @@ class State(val width: Int, val height: Int, val elements: mutable.Map[(Int, Int
     beams += beam
     connector.beams += beam
     colored.beams += beam
+
+    reloadBeams()
   }
 
   def isBeamsIntersects(first: Beam, second: Beam): Boolean = {
@@ -154,6 +137,31 @@ class State(val width: Int, val height: Int, val elements: mutable.Map[(Int, Int
     case r: Reciver if r.isTarget => r.beams.exists(_.color == r.color)
     case _ => true
   })
+
+  def reloadBeams() {
+    beams.foreach(_.color = Absent)
+
+    val visitedBeams = mutable.Set.empty[Beam]
+    def visit(colored: Colored) {
+      colored.beams.diff(visitedBeams)
+        .foreach(beam => {
+          beam.updateColor()
+          visitedBeams += beam
+
+          beam.colored match {
+            case _: Reciver =>
+            case _ =>
+              visit(beam.connector)
+              visit(beam.colored)
+          }
+        })
+    }
+
+    elements.foreach({
+      case ((_, _), s: Sender) => visit(s)
+      case _ =>
+    })
+  }
 }
 
 object State {

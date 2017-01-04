@@ -14,24 +14,6 @@ object GameService {
 
   def state(id: Int): State = states(id)
 
-  def recalculateState(state: State): State = state
-
-  def updateBeams(state: State, connector: Connector, connections: Set[(Int, Int)]) {
-
-    connector.beams.foreach(beam => state.removeBeam(beam))
-    connections.foreach(f => {
-      state.elements(f) match {
-        case c: Colored if c != connector => state.addBeam(c, connector)
-        case _ =>
-      }
-    })
-  }
-
-  def removeConcetrator(state: State, connector: Connector) {
-    connector.beams.foreach(beam => state.removeBeam(beam))
-    state.elements.remove((connector.x, connector.y))
-  }
-
   def updateState(id: Int,
                   src: (Int, Int), target: (Int, Int),
                   connections: Set[(Int, Int)]): State = {
@@ -43,6 +25,11 @@ object GameService {
         state
       case _ => null
     }
+  }
+
+  private def removeConcetrator(state: State, connector: Connector) {
+    connector.beams.foreach(beam => state.removeBeam(beam))
+    state.elements.remove((connector.x, connector.y))
   }
 
   private def addConcetrator(target: (Int, Int), connections: Set[(Int, Int)], state: State) = {
