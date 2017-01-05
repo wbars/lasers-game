@@ -30,7 +30,7 @@ class GameController @Inject() (gameService: GameService) extends Controller {
 
   def updateState() = Action { implicit request =>
     val move: Protocol.Move = read[Protocol.Move](request.body.asJson.get.toString())
-    Ok(write[Protocol.Game](wrapToGame(move.id, gameService.updateState(
+    Ok(write[Protocol.Game](wrapToGame(move.id, gameService.moveElement(
       move.id,
       move.src.tupled, move.target.tupled,
       move.connections.map(_.tupled))

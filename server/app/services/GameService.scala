@@ -17,14 +17,15 @@ class GameService {
 
   def state(id: Int): State = states(id)
 
-  def updateState(id: Int,
-                  src: (Int, Int), target: (Int, Int),
+  def moveElement(stateId: Int,
+                  elementSrc: (Int, Int), elementTarget: (Int, Int),
                   connections: Set[(Int, Int)]): State = {
-    val state = states(id)
-    state.elements(src) match {
+    val state = states(stateId)
+    state.elements(elementSrc) match {
       case connector: Connector =>
         removeConcetrator(state, connector)
-        addConcetrator(target, connections, state)
+        addConcetrator(elementTarget, connections, state)
+        state.reloadBeams()
         state
       case _ => null
     }

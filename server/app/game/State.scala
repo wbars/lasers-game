@@ -46,7 +46,6 @@ case class Reciver(override val x: Int, override val y: Int, override val color:
 
 case class Connector(var x: Int, var y: Int, override val ch: Char = 'A')(val beams: mutable.Set[Beam] = mutable.Set.empty) extends Colored {
   def color: Color = beams.collectFirst({ case b: Beam if b.color != Absent => b.color }).getOrElse(Absent)
-
 }
 
 case class Beam(colored: Colored, connector: Connector)(var color: Color) {
@@ -57,10 +56,6 @@ case class Beam(colored: Colored, connector: Connector)(var color: Color) {
   def x2: Double = connector.x + 0.5
 
   def y2: Double = connector.y + 0.5
-
-  def updateColor() {
-    color = State.beamColor(colored, connector)
-  }
 }
 
 class State(val width: Int, val height: Int, val elements: mutable.Map[(Int, Int), Element], val beams: mutable.Set[Beam] = mutable.Set.empty) {
@@ -91,7 +86,6 @@ class State(val width: Int, val height: Int, val elements: mutable.Map[(Int, Int
 
     def isBeamValid(beam: Beam): Boolean = {
       if (connector == colored) return false
-      if (beam.color != Absent && isBeamIntersectsEnv(beam)) return false
       if (colored.color != Absent && connector.color != Absent && colored.color != connector.color) return false
       if (isBeamExists(colored, connector)) return false
 
@@ -100,7 +94,7 @@ class State(val width: Int, val height: Int, val elements: mutable.Map[(Int, Int
 
     val beam = Beam(colored, connector)(State.beamColor(colored, connector))
     if (isBeamValid(beam)) {
-      addBeam(colored, connector, beam)
+      addBeam(beam)
     }
     beam
   }
@@ -113,11 +107,10 @@ class State(val width: Int, val height: Int, val elements: mutable.Map[(Int, Int
     reloadBeams()
   }
 
-
-  private def addBeam(colored: Colored, connector: Connector, beam: Beam) = {
+  private def addBeam(beam: Beam) = {
     beams += beam
-    connector.beams += beam
-    colored.beams += beam
+    beam.connector.beams += beam
+    beam.colored.beams += beam
 
     reloadBeams()
   }
@@ -138,6 +131,10 @@ class State(val width: Int, val height: Int, val elements: mutable.Map[(Int, Int
     case _ => true
   })
 
+  private def updateColor(beam: Beam) {
+    beam.color = if (isBeamIntersectsEnv(beam)) Absent else State.beamColor(beam.colored, beam.connector)
+  }
+
   def reloadBeams() {
     beams.foreach(_.color = Absent)
 
@@ -145,7 +142,7 @@ class State(val width: Int, val height: Int, val elements: mutable.Map[(Int, Int
     def visit(colored: Colored) {
       colored.beams.diff(visitedBeams)
         .foreach(beam => {
-          beam.updateColor()
+          updateColor(beam)
           visitedBeams += beam
 
           beam.colored match {

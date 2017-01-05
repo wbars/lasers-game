@@ -64,7 +64,7 @@ class StateTest extends FunSuite with Matchers {
     state.beams should have size 0
   }
 
-  test("Can't add intersecting beams") {
+  test("Beams intersecting another beam should have absent color") {
     val sender1 = createSender(0, 0, Red)
     val connector1 = createConnector(2, 2)
     val connector2 = createConnector(0, 2)
@@ -75,8 +75,9 @@ class StateTest extends FunSuite with Matchers {
     state.addBeam(sender1, connector1)
     state.beams should have size 1
 
-    state.addBeam(sender2, connector2)
-    state.beams should have size 1
+    val intersectingBeam = state.addBeam(sender2, connector2)
+    state.beams should have size 2
+    intersectingBeam should have('color (Absent))
   }
 
   test("Beam between empty conectrator and reciever should have absent color") {
@@ -114,14 +115,14 @@ class StateTest extends FunSuite with Matchers {
     connector1.color should be(Red)
   }
 
-  test("cant add beams, intersecting elements") {
+  test("Beams, intersecting elements should be absent") {
     val sender = createSender(0, 0, Red)
     val connector = createConnector(0, 2)
     val wall = createWall(0, 1)
     val state = createState(1, 3, Seq(sender, connector, wall))
 
     state.addBeam(sender, connector)
-    state.beams should have size 0
+    state.beams.head should have('color (Absent))
   }
 
   test("isWin works properly") {
@@ -217,6 +218,5 @@ class StateTest extends FunSuite with Matchers {
     all(state.beams) should have('color (Red))
     state.beams should have size 5
   }
-
 }
 
