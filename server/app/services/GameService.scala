@@ -1,8 +1,11 @@
 package services
 
+import javax.inject.Singleton
+
 import game._
 
-object GameService {
+@Singleton
+class GameService {
   var states: Map[Int, State] = Map.empty
   var counter: Int = 0
 

@@ -1,5 +1,7 @@
 package controllers
 
+import javax.inject.Inject
+
 import game.{Beam, ElementFactory, State}
 import services.GameService
 import shared._
@@ -7,7 +9,7 @@ import upickle.default._
 import play.api.mvc.{Action, Controller}
 
 
-object GameController extends Controller {
+class GameController @Inject() (gameService: GameService) extends Controller {
 
   def index() = Action { implicit request =>
     Ok(views.html.game_index(request))
@@ -18,17 +20,17 @@ object GameController extends Controller {
   }
 
   def createGame() = Action {
-    Ok(GameService.createState().toString)
+    Ok(gameService.createState().toString)
   }
 
   def gameData(id: Int) = Action {
-    val state = GameService.state(id)
+    val state = gameService.state(id)
     Ok(write[Protocol.Game](wrapToGame(id, state)))
   }
 
   def updateState() = Action { implicit request =>
     val move: Protocol.Move = read[Protocol.Move](request.body.asJson.get.toString())
-    Ok(write[Protocol.Game](wrapToGame(move.id, GameService.updateState(
+    Ok(write[Protocol.Game](wrapToGame(move.id, gameService.updateState(
       move.id,
       move.src.tupled, move.target.tupled,
       move.connections.map(_.tupled))
