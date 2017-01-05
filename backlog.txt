@@ -4,3 +4,4 @@
 - Doors
 - Alert about winning
 - Validate move
+- add test for door(wire)

@@ -23,4 +23,28 @@ class GameServiceTest extends FunSuite with Matchers {
     gameService.moveElement(1, (0, 1), (2, 2), Set.empty)
     state.beams.head should have('color (Red))
   }
+
+  test("Wires should toggle walls") {
+    val state = ElementFactory.fromString(
+      """|AA****#
+         |R#***#r
+         |******#
+         |B*****b""".stripMargin('|'),
+      Seq(((1, 0), (0, 0))),
+      Seq(((0, 6), (3, 6)), ((2, 6), (3, 6)), ((1, 5), (3, 6)), ((1, 1), (3, 6))),
+      Seq((1, 6))
+    )
+    gameService.states += 1 -> state
+
+    gameService.moveElement(1, (0, 0), (1, 3), Set((1, 0), (1, 6)))
+    state.beams should have size 2
+    all(state.beams) should have('color (Absent))
+    state should have('isWinState (false))
+
+    gameService.moveElement(1, (0, 1), (3, 3), Set((3, 0), (3, 6)))
+    gameService.moveElement(1, (1, 3), (1, 3), Set((1, 0), (1, 6)))
+    state.beams should have size 4
+    all(state.beams) should not have 'color (Absent)
+    state should have('isWinState (true))
+  }
 }

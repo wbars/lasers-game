@@ -20,6 +20,8 @@ sealed trait Element {
   def ch: Char
 
   override def toString: String = ch.toString
+
+  def transparent: Boolean = false
 }
 
 sealed trait Colored extends Element {
@@ -28,8 +30,6 @@ sealed trait Colored extends Element {
   def beams: mutable.Set[Beam]
 }
 
-case class Wall(override val x: Int, override val y: Int, override val ch: Char = '#') extends Element
-
 case class Sender(override val x: Int, override val y: Int, override val color: Color)(val beams: mutable.Set[Beam] = mutable.Set.empty) extends Colored {
   override def ch: Char = color match {
     case Red => 'R'
@@ -37,11 +37,19 @@ case class Sender(override val x: Int, override val y: Int, override val color: 
   }
 }
 
-case class Reciver(override val x: Int, override val y: Int, override val color: Color, isTarget: Boolean = false)(val beams: mutable.Set[Beam] = mutable.Set.empty) extends Colored {
+case class Reciver(override val x: Int, override val y: Int, override val color: Color, var isTarget: Boolean = false)(val beams: mutable.Set[Beam] = mutable.Set.empty) extends Colored {
   override def ch: Char = color match {
     case Red => 'r'
     case Blue => 'b'
   }
+
+  def isActive: Boolean = beams.exists(_.color == color)
+}
+
+
+case class Wall(override val x: Int, override val y: Int, wires: mutable.Set[Reciver] = mutable.Set.empty) extends Element {
+  override def transparent: Boolean = wires.nonEmpty && wires.forall(_.isActive)
+  override def ch: Char = if (transparent) '*' else '#'
 }
 
 case class Connector(var x: Int, var y: Int, override val ch: Char = 'A')(val beams: mutable.Set[Beam] = mutable.Set.empty) extends Colored {
@@ -58,7 +66,9 @@ case class Beam(colored: Colored, connector: Connector)(var color: Color) {
   def y2: Double = connector.y + 0.5
 }
 
-class State(val width: Int, val height: Int, val elements: mutable.Map[(Int, Int), Element], val beams: mutable.Set[Beam] = mutable.Set.empty) {
+class State(val width: Int, val height: Int,
+            val elements: mutable.Map[(Int, Int), Element],
+            val beams: mutable.Set[Beam] = mutable.Set.empty) {
   def isValid = true
 
   override def toString: String = {
@@ -79,7 +89,7 @@ class State(val width: Int, val height: Int, val elements: mutable.Map[(Int, Int
       isBeamIntersectsLine(beam, element.x, element.y + 1, element.x, element.y)
 
   def isBeamIntersectsEnv(beam: Beam): Boolean = elements.values
-    .exists(e => e != beam.colored && e != beam.connector && isBeamIntersectsElement(e, beam)) ||
+    .exists(e => e != beam.colored && e != beam.connector && !e.transparent && isBeamIntersectsElement(e, beam)) ||
     beams.exists(b => b != beam && isBeamsIntersects(b, beam))
 
   def addBeam(colored: Colored, connector: Connector): Beam = {
@@ -127,7 +137,7 @@ class State(val width: Int, val height: Int, val elements: mutable.Map[(Int, Int
   def isBeamExists(first: Colored, second: Colored): Boolean = beams.exists(e => Set(e.colored, e.connector) == Set(first, second))
 
   def isWinState: Boolean = elements.values.forall({
-    case r: Reciver if r.isTarget => r.beams.exists(_.color == r.color)
+    case r: Reciver if r.isTarget => r.isActive
     case _ => true
   })
 
@@ -139,6 +149,9 @@ class State(val width: Int, val height: Int, val elements: mutable.Map[(Int, Int
     beams.foreach(_.color = Absent)
 
     val visitedBeams = mutable.Set.empty[Beam]
+    val visitedRecivers = mutable.Set.empty[Reciver]
+    var tryAgain = false
+
     def visit(colored: Colored) {
       colored.beams.diff(visitedBeams)
         .foreach(beam => {
@@ -146,7 +159,11 @@ class State(val width: Int, val height: Int, val elements: mutable.Map[(Int, Int
           visitedBeams += beam
 
           beam.colored match {
-            case _: Reciver =>
+            case r: Reciver =>
+              if (beam.color != Absent && !visitedRecivers.contains(r)) {
+                tryAgain = true
+                visitedRecivers += r
+              }
             case _ =>
               visit(beam.connector)
               visit(beam.colored)
@@ -154,10 +171,14 @@ class State(val width: Int, val height: Int, val elements: mutable.Map[(Int, Int
         })
     }
 
-    elements.foreach({
-      case ((_, _), s: Sender) => visit(s)
-      case _ =>
-    })
+    do {
+      tryAgain = false
+      visitedBeams.clear()
+      elements.foreach({
+        case ((_, _), s: Sender) => visit(s)
+        case _ =>
+      })
+    } while (tryAgain)
   }
 }
 

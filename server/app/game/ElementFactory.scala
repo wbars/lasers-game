@@ -27,10 +27,30 @@ object ElementFactory {
     ElementFactory.createState(rows.head.length, rows.length, elems)
   }
 
+  def fromString(stateData: String,
+                 beams: Seq[((Int, Int), (Int, Int))],
+                 wires: Seq[((Int, Int), (Int, Int))],
+                 targets: Seq[(Int, Int)]
+                ) : State = {
+    val state = fromString(stateData)
+    beams.foreach(t => state.addBeam(
+      state.elements(t._1).asInstanceOf[Colored],
+      state.elements(t._2).asInstanceOf[Connector]
+    ))
+
+    wires.foreach(t => state.elements(t._1).asInstanceOf[Wall].wires += state.elements(t._2).asInstanceOf[Reciver])
+    targets.foreach(state.elements(_).asInstanceOf[Reciver].isTarget = true)
+
+    state
+  }
+
   def defaultState: State = fromString(
-    """|*A**A**
-       |R*****r
-       |***A***
-       |B**A**b""".stripMargin('|')
+    """|AA****#
+       |R****#r
+       |******#
+       |B*****b""".stripMargin('|'),
+    Seq(((1, 0), (0, 0))),
+    Seq(((0, 6), (3, 6)), ((2, 6), (3, 6)), ((1, 5), (3, 6))),
+    Seq((1, 6))
   )
 }
