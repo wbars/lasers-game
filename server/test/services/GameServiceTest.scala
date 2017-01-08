@@ -47,4 +47,21 @@ class GameServiceTest extends FunSuite with Matchers {
     all(state.beams) should not have 'color (Absent)
     state should have('isWinState (true))
   }
+
+  test("Connnector should not replace transparent wall") {
+    val state = ElementFactory.fromString(
+      """|A*#
+         |RAr""".stripMargin,
+      Seq(((1, 2), (1, 1)), ((1, 0), (1, 1))),
+      Seq(((0, 2), (1, 2))),
+      Seq((1, 2)
+      )
+    )
+    gameService.states += 1 -> state
+    gameService.state(1).elements((0, 2)).asInstanceOf[Wall] should have('transparent (true))
+    gameService.moveElement(1, (0, 0), (0, 2), Set.empty)
+
+    gameService.state(1).elements((0, 2)) shouldBe a [Wall]
+    gameService.state(1).elements((0, 0)) shouldBe a [Connector]
+  }
 }

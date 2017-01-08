@@ -21,10 +21,13 @@ class GameService {
                   elementSrc: (Int, Int), elementTarget: (Int, Int),
                   connections: Set[(Int, Int)]): State = {
     val state = states(stateId)
+
+    def getTargetPos = if (!state.elements.contains(elementTarget)) elementTarget else elementSrc
+
     state.elements(elementSrc) match {
       case connector: Connector =>
         removeConcetrator(state, connector)
-        addConcetrator(elementTarget, connections, state)
+        addConcetrator(getTargetPos, connections, state)
         state.reloadBeams()
         state
       case _ => null
