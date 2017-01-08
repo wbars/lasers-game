@@ -1,7 +1,4 @@
-- IT for gameservice
 - Error handling
 - With game list of failed beams with messages should be returned
-- Doors
 - Alert about winning
-- Validate move
-- add test for door(wire)
+- cycle problem should not shutdown beams
