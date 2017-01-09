@@ -31,7 +31,7 @@ object ElementFactory {
                  beams: Seq[((Int, Int), (Int, Int))],
                  wires: Seq[((Int, Int), (Int, Int))],
                  targets: Seq[(Int, Int)]
-                ) : State = {
+                ): State = {
     val state = fromString(stateData)
     beams.foreach(t => state.addBeam(
       state.elements(t._1).asInstanceOf[Colored],
@@ -45,12 +45,13 @@ object ElementFactory {
   }
 
   def defaultState: State = fromString(
-    """|AA****#
-       |R****#r
-       |******#
-       |B*****b""".stripMargin('|'),
-    Seq(((1, 0), (0, 0))),
-    Seq(((0, 6), (3, 6)), ((2, 6), (3, 6)), ((1, 5), (3, 6))),
-    Seq((1, 6))
+    """|****
+       |****
+       |A***
+       |RA#r
+       |BA#b""".stripMargin('|'),
+    Seq.empty,
+    Seq(((3, 2), (4, 3)), ((4, 2), (3, 3))),
+    Seq.empty
   )
 }

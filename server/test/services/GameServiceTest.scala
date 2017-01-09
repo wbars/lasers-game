@@ -64,4 +64,30 @@ class GameServiceTest extends FunSuite with Matchers {
     gameService.state(1).elements((0, 2)) shouldBe a [Wall]
     gameService.state(1).elements((0, 0)) shouldBe a [Connector]
   }
+
+  test("Deadlock problem should be solved") {
+    val state = ElementFactory.fromString(
+      """|*A**
+         |****
+         |****
+         |RA#r
+         |BA#b""".stripMargin('|'),
+      Seq.empty,
+      Seq(((3, 2), (4, 3)), ((4, 2), (3, 3))),
+      Seq((3, 3), (4,3))
+    )
+    gameService.states += 1 -> state
+    gameService.moveElement(1, (0, 1), (0, 1), Set((3, 0), (3, 3)))
+    all(state.beams) should have('color (Red))
+    state should have('isWinState (false))
+
+    gameService.moveElement(1, (4, 1), (4, 1), Set((4, 0), (4, 3)))
+    gameService.moveElement(1, (3, 1), (3, 1), Set((3, 0), (3, 3)))
+    all(state.beams) should not have 'color (Absent)
+    state should have('isWinState (true))
+
+    gameService.moveElement(1, (0, 1), (0, 1), Set.empty)
+    all(state.beams) should not have 'color (Absent)
+    state should have('isWinState (true))
+  }
 }
