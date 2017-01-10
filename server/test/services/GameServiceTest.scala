@@ -89,5 +89,8 @@ class GameServiceTest extends FunSuite with Matchers {
     gameService.moveElement(1, (0, 1), (0, 1), Set.empty)
     all(state.beams) should not have 'color (Absent)
     state should have('isWinState (true))
+
+    gameService.moveElement(1, (3, 1), (2, 1), Set.empty)
+    state should have('isWinState (false))
   }
 }

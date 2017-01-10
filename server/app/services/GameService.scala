@@ -27,19 +27,25 @@ class GameService {
     state.elements(elementSrc) match {
       case connector: Connector =>
         removeConcetrator(state, connector)
-        addConcetrator(getTargetPos, connections, state)
-        state.reloadBeams()
+        val concetrator = addConcetrator(getTargetPos, connections, state)
+        state.paintComponent(state.getConnectedComponent(concetrator))
+        state.beamsIntersectsElement(concetrator).foreach(b => state.paintBeamElementsComponents(b))
         state
       case _ => null
     }
   }
 
   private def removeConcetrator(state: State, connector: Connector) {
+    var intersectedBeams = connector.beams.flatMap(state.beamsIntersectsBeam)
     connector.beams.foreach(beam => state.removeBeam(beam))
+
+    intersectedBeams = intersectedBeams ++ state.beamsIntersectsElement(connector)
     state.elements.remove((connector.x, connector.y))
+
+    intersectedBeams.foreach(b => state.paintBeamElementsComponents(b))
   }
 
-  private def addConcetrator(target: (Int, Int), connections: Set[(Int, Int)], state: State) = {
+  private def addConcetrator(target: (Int, Int), connections: Set[(Int, Int)], state: State): Connector = {
     def beamAddOrder(element: Element): Int = element match {
       case _: Sender => 1
       case _: Reciver => 3
@@ -53,5 +59,7 @@ class GameService {
       .foreach({
         case c: Colored => state.addBeam(c, newConnector)
       })
+
+    newConnector
   }
 }

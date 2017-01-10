@@ -38,7 +38,10 @@ object ElementFactory {
       state.elements(t._2).asInstanceOf[Connector]
     ))
 
-    wires.foreach(t => state.elements(t._1).asInstanceOf[Wall].wires += state.elements(t._2).asInstanceOf[Reciver])
+    wires.foreach(t => {
+      state.elements(t._1).asInstanceOf[Wall].wires += state.elements(t._2).asInstanceOf[Reciver]
+      state.elements(t._2).asInstanceOf[Reciver].wires += state.elements(t._1).asInstanceOf[Wall]
+    })
     targets.foreach(state.elements(_).asInstanceOf[Reciver].isTarget = true)
 
     state

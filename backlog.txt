@@ -1,4 +1,3 @@
 - Error handling
 - With game list of failed beams with messages should be returned
 - Alert about winning
-- cycle problem should not shutdown beams

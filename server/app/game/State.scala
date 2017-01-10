@@ -2,6 +2,8 @@ package game
 
 import java.awt.geom.Line2D
 
+import game.State.Component
+
 import scala.collection.mutable
 
 sealed abstract class Color
@@ -37,7 +39,7 @@ case class Sender(override val x: Int, override val y: Int, override val color: 
   }
 }
 
-case class Reciver(override val x: Int, override val y: Int, override val color: Color, var isTarget: Boolean = false)(val beams: mutable.Set[Beam] = mutable.Set.empty) extends Colored {
+case class Reciver(override val x: Int, override val y: Int, override val color: Color, var isTarget: Boolean = false)(val beams: mutable.Set[Beam] = mutable.Set.empty, val wires: mutable.Set[Wall] = mutable.Set.empty) extends Colored {
   override def ch: Char = color match {
     case Red => 'r'
     case Blue => 'b'
@@ -49,6 +51,7 @@ case class Reciver(override val x: Int, override val y: Int, override val color:
 
 case class Wall(override val x: Int, override val y: Int, wires: mutable.Set[Reciver] = mutable.Set.empty) extends Element {
   override def transparent: Boolean = wires.nonEmpty && wires.forall(_.isActive)
+
   override def ch: Char = if (transparent) '*' else '#'
 }
 
@@ -69,6 +72,8 @@ case class Beam(colored: Colored, connector: Connector)(var color: Color) {
 class State(val width: Int, val height: Int,
             val elements: mutable.Map[(Int, Int), Element],
             val beams: mutable.Set[Beam] = mutable.Set.empty) {
+  def beamsIntersectsElement(element: Element): mutable.Set[Beam] = beams.filter(State.isBeamIntersectsElement(element, _))
+
   def isValid = true
 
   override def toString: String = {
@@ -82,16 +87,6 @@ class State(val width: Int, val height: Int,
     Range(0, height).map(buildRow).mkString("\n")
   }
 
-  def isBeamIntersectsElement(element: Element, beam: Beam): Boolean =
-    isBeamIntersectsLine(beam, element.x, element.y, element.x + 1, element.y) ||
-      isBeamIntersectsLine(beam, element.x + 1, element.y, element.x + 1, element.y + 1) ||
-      isBeamIntersectsLine(beam, element.x + 1, element.y + 1, element.x, element.y + 1) ||
-      isBeamIntersectsLine(beam, element.x, element.y + 1, element.x, element.y)
-
-  def isBeamIntersectsEnv(beam: Beam): Boolean = elements.values
-    .exists(e => e != beam.colored && e != beam.connector && !e.transparent && isBeamIntersectsElement(e, beam)) ||
-    beams.exists(b => b != beam && isBeamsIntersects(b, beam))
-
   def addBeam(colored: Colored, connector: Connector): Beam = {
 
     def isBeamValid(beam: Beam): Boolean = {
@@ -102,7 +97,7 @@ class State(val width: Int, val height: Int,
       true
     }
 
-    val beam = Beam(colored, connector)(State.beamColor(colored, connector))
+    val beam = Beam(colored, connector)(Absent)
     if (isBeamValid(beam)) {
       addBeam(beam)
     }
@@ -114,16 +109,74 @@ class State(val width: Int, val height: Int,
     beam.connector.beams -= beam
     beams -= beam
 
-    reloadBeams()
+    paintBeamElementsComponents(beam)
   }
+
+  def paintBeamElementsComponents(beam: Beam) {
+    if (isBeamIntersectsEnv(beam)) beam.color = Absent
+    paintComponent(getConnectedComponent(beam.colored))
+    paintComponent(getConnectedComponent(beam.connector))
+  }
+
+  def isBeamExists(first: Colored, second: Colored): Boolean = beams.exists(e => Set(e.colored, e.connector) == Set(first, second))
+
+  def isWinState: Boolean = elements.values.collect({ case r: Reciver if r.isTarget => r }).forall(_.isActive)
+
+  def paintComponent(component: Component) {
+    val componentColor = component.elements.find({
+      case _: Sender => true
+      case _ => false
+    }) match {
+      case Some(s: Sender) => s.color
+      case _ => Absent
+    }
+    component.beams.foreach(_.color = componentColor)
+
+    component.elements.collect({ case r: Reciver => r })
+      .flatMap(_.wires)
+      .flatMap(beamsIntersectsWall)
+      .foreach(paintBeamElementsComponents)
+  }
+
+  def getConnectedComponent(colored: Colored): Component = {
+    val componentElements: mutable.Set[Colored] = mutable.Set.empty[Colored]
+    val componentBeams: mutable.Set[Beam] = mutable.Set.empty[Beam]
+
+    def dfs(colored: Colored) {
+      componentElements += colored
+      colored.beams
+        .filter(!isBeamIntersectsEnv(_))
+        .foreach(beam => {
+          componentBeams += beam
+          if (!componentElements.contains(beam.colored)) dfs(beam.colored)
+          if (!componentElements.contains(beam.connector)) dfs(beam.connector)
+        })
+    }
+
+    dfs(colored)
+    Component(componentElements, componentBeams)
+  }
+
+  private def beamsIntersectsWall(wall: Wall): mutable.Set[Beam] = beams.filter(State.isBeamIntersectsElement(wall, _) && !wall.transparent)
+
+  private def isBeamIntersectsEnv(beam: Beam): Boolean = elements.values
+    .exists(e => e != beam.colored && e != beam.connector && !e.transparent && State.isBeamIntersectsElement(e, beam)) ||
+    beams.exists(b => b != beam && State.isBeamsIntersects(b, beam))
 
   private def addBeam(beam: Beam) = {
     beams += beam
     beam.connector.beams += beam
     beam.colored.beams += beam
 
-    reloadBeams()
+    paintBeamElementsComponents(beam)
   }
+
+  def beamsIntersectsBeam(beam: Beam): mutable.Set[Beam] = beams.filter(State.isBeamsIntersects(_, beam))
+}
+
+object State {
+
+  case class Component(elements: Iterable[Colored], beams: Iterable[Beam])
 
   def isBeamsIntersects(first: Beam, second: Beam): Boolean = {
     val firstPoints = Set((first.x1, first.y1), (first.x2, first.y2))
@@ -131,63 +184,13 @@ class State(val width: Int, val height: Int,
     !isLinesTouches && isBeamIntersectsLine(first, second.x1, second.y1, second.x2, second.y2)
   }
 
-  private def isBeamIntersectsLine(beam: Beam, x1: Double, y1: Double, x2: Double, y2: Double) =
+  def isBeamIntersectsLine(beam: Beam, x1: Double, y1: Double, x2: Double, y2: Double): Boolean =
     Line2D.linesIntersect(beam.x1, beam.y1, beam.x2, beam.y2, x1, y1, x2, y2)
 
-  def isBeamExists(first: Colored, second: Colored): Boolean = beams.exists(e => Set(e.colored, e.connector) == Set(first, second))
+  def isBeamIntersectsElement(element: Element, beam: Beam): Boolean =
+    isBeamIntersectsLine(beam, element.x, element.y, element.x + 1, element.y) ||
+      isBeamIntersectsLine(beam, element.x + 1, element.y, element.x + 1, element.y + 1) ||
+      isBeamIntersectsLine(beam, element.x + 1, element.y + 1, element.x, element.y + 1) ||
+      isBeamIntersectsLine(beam, element.x, element.y + 1, element.x, element.y)
 
-  def isWinState: Boolean = elements.values.forall({
-    case r: Reciver if r.isTarget => r.isActive
-    case _ => true
-  })
-
-  private def updateColor(beam: Beam) {
-    beam.color = if (isBeamIntersectsEnv(beam)) Absent else State.beamColor(beam.colored, beam.connector)
-  }
-
-  def reloadBeams() {
-    beams.foreach(_.color = Absent)
-
-    val visitedBeams = mutable.Set.empty[Beam]
-    val visitedRecivers = mutable.Set.empty[Reciver]
-    var tryAgain = false
-
-    def visit(colored: Colored) {
-      colored.beams.diff(visitedBeams)
-        .foreach(beam => {
-          updateColor(beam)
-          visitedBeams += beam
-
-          beam.colored match {
-            case r: Reciver =>
-              if (beam.color != Absent && !visitedRecivers.contains(r)) {
-                tryAgain = true
-                visitedRecivers += r
-              }
-            case _ =>
-              visit(beam.connector)
-              visit(beam.colored)
-          }
-        })
-    }
-
-    do {
-      tryAgain = false
-      visitedBeams.clear()
-      elements.foreach({
-        case ((_, _), s: Sender) => visit(s)
-        case _ =>
-      })
-    } while (tryAgain)
-  }
-}
-
-object State {
-  def beamColor(colored: Colored, connector: Connector): Color = connector.color match {
-    case Absent => colored match {
-      case _: Reciver => Absent
-      case c: Colored => c.color
-    }
-    case _ => connector.color
-  }
 }
