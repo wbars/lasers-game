@@ -1,2 +1,4 @@
 - Error handling
 - With game list of failed beams with messages should be returned
+- validaty of elements move
+- jammers!
