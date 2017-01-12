@@ -41,5 +41,5 @@ class GameController @Inject() (gameService: GameService) extends Controller {
   private def beamsToPoints(beams: Seq[Beam]): Seq[(Protocol.Point, Protocol.Point, String)] =
     beams.map(beam => (Protocol.Point(beam.colored.x, beam.colored.y), Protocol.Point(beam.connector.x, beam.connector.y), beam.color.toString))
 
-  private def wrapToGame(id: Int, state: State): Protocol.Game = Protocol.Game(id, state.toString, beamsToPoints(state.beams.toSeq))
+  private def wrapToGame(id: Int, state: State): Protocol.Game = Protocol.Game(id, state.toString, beamsToPoints(state.beams.toSeq), state.isWinState)
 }

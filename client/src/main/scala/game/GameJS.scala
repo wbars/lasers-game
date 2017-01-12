@@ -157,6 +157,9 @@ object GameJS {
         gameBody(game)
       ).render)
     drawBeams(game)
+    if (game.isWin) {
+      dom.window.alert("Win!")
+    }
   }
 
   def createGame(): JQueryXHR = {

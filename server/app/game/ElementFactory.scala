@@ -55,6 +55,6 @@ object ElementFactory {
        |BA#b""".stripMargin('|'),
     Seq.empty,
     Seq(((3, 2), (4, 3)), ((4, 2), (3, 3))),
-    Seq.empty
+    Seq((3, 3), (4, 3))
   )
 }
