@@ -112,17 +112,17 @@ class State(val width: Int, val height: Int,
     paintBeamElementsComponents(beam)
   }
 
-  def paintBeamElementsComponents(beam: Beam) {
+  def paintBeamElementsComponents(beam: Beam, paintedRecivers: Set[Reciver] = Set.empty) {
     if (isBeamIntersectsEnv(beam)) beam.color = Absent
-    paintComponent(getConnectedComponent(beam.colored))
-    paintComponent(getConnectedComponent(beam.connector))
+    paintComponent(getConnectedComponent(beam.colored), paintedRecivers)
+    paintComponent(getConnectedComponent(beam.connector), paintedRecivers)
   }
 
   def isBeamExists(first: Colored, second: Colored): Boolean = beams.exists(e => Set(e.colored, e.connector) == Set(first, second))
 
   def isWinState: Boolean = elements.values.collect({ case r: Reciver if r.isTarget => r }).forall(_.isActive)
 
-  def paintComponent(component: Component) {
+  def paintComponent(component: Component, paintedRecivers: Set[Reciver] = Set.empty) {
     val componentColor = component.elements.find({
       case _: Sender => true
       case _ => false
@@ -132,10 +132,12 @@ class State(val width: Int, val height: Int,
     }
     component.beams.foreach(_.color = componentColor)
 
-    component.elements.collect({ case r: Reciver => r })
+    val recivers = component.elements.collect({ case r: Reciver => r })
+      .filter(!paintedRecivers.contains(_)).toSet
+    recivers
       .flatMap(_.wires)
       .flatMap(beamsIntersectsWall)
-      .foreach(paintBeamElementsComponents)
+      .foreach(paintBeamElementsComponents(_, recivers ++ paintedRecivers))
   }
 
   def getConnectedComponent(colored: Colored): Component = {
@@ -157,7 +159,7 @@ class State(val width: Int, val height: Int,
     Component(componentElements, componentBeams)
   }
 
-  private def beamsIntersectsWall(wall: Wall): mutable.Set[Beam] = beams.filter(State.isBeamIntersectsElement(wall, _) && !wall.transparent)
+  private def beamsIntersectsWall(wall: Wall): mutable.Set[Beam] = beams.filter(State.isBeamIntersectsElement(wall, _))
 
   private def isBeamIntersectsEnv(beam: Beam): Boolean = elements.values
     .exists(e => e != beam.colored && e != beam.connector && !e.transparent && State.isBeamIntersectsElement(e, beam)) ||

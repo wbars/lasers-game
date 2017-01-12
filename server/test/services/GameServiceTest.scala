@@ -93,4 +93,27 @@ class GameServiceTest extends FunSuite with Matchers {
     gameService.moveElement(1, (3, 1), (2, 1), Set.empty)
     state should have('isWinState (false))
   }
+
+  test("Release beam by removing intersecting concetrator should propagate on connected recievers") {
+    val state = ElementFactory.fromString(
+      """|*A**
+         |****
+         |****
+         |RA#r
+         |BA#b""".stripMargin('|'),
+      Seq.empty,
+      Seq(((3, 2), (4, 3)), ((4, 2), (3, 3))),
+      Seq((3, 3), (4,3))
+    )
+    gameService.states += 1 -> state
+    gameService.moveElement(1, (0, 1), (0, 1), Set((3, 0), (3, 3)))
+    gameService.moveElement(1, (4, 1), (4, 1), Set((4, 0), (4, 3)))
+    assert(gameService.state(1).elements((4, 3)).asInstanceOf[Reciver].isActive)
+
+    gameService.moveElement(1, (3, 1), (2, 1), Set.empty)
+    assert(!gameService.state(1).elements((4, 3)).asInstanceOf[Reciver].isActive)
+
+    gameService.moveElement(1, (2, 1), (3, 1), Set.empty)
+    assert(gameService.state(1).elements((4, 3)).asInstanceOf[Reciver].isActive)
+  }
 }
