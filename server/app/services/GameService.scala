@@ -1,8 +1,12 @@
 package services
 
+import java.util
 import javax.inject.Singleton
 
+import scala.collection.mutable.Queue
 import game._
+
+import scala.collection.mutable
 
 @Singleton
 class GameService {
@@ -17,12 +21,46 @@ class GameService {
 
   def state(id: Int): State = states(id)
 
+
+  private def isPathExists(src: (Int, Int), target: (Int, Int), state: State): Boolean = {
+    val availableMoves = mutable.Queue[(Int, Int)]()
+    val visitedPos = mutable.Set[(Int, Int)]()
+    availableMoves.enqueue(src)
+
+    while (availableMoves.nonEmpty) {
+      val pos = availableMoves.dequeue()
+      visitedPos.add(pos)
+
+      val moves = Set(
+        (pos._1 + 1, pos._2),
+        (pos._1, pos._2 + 1),
+        (pos._1 - 1, pos._2),
+        (pos._1, pos._2 - 1)
+      )
+        .diff(visitedPos)
+        .filter({ case (i, j) => i < state.height && i >= 0 && j < state.width && j >= 0 })
+        .filter(p => !state.elements.contains(p) || (state.elements(p) match {
+          case w: Wall => w.transparent
+          case _ => false
+        }))
+
+      if (moves.contains(target)) return true
+      moves.foreach(availableMoves.enqueue(_))
+    }
+    false
+  }
+
   def moveElement(stateId: Int,
                   elementSrc: (Int, Int), elementTarget: (Int, Int),
-                  connections: Set[(Int, Int)]): State = {
+                  connections: Set[(Int, Int)] = Set.empty): State = {
     val state = states(stateId)
 
-    def getTargetPos = if (!state.elements.contains(elementTarget)) elementTarget else elementSrc
+    def getTargetPos: (Int, Int) =
+      if (state.elements.contains(elementTarget) || !isPathExists(elementSrc, elementTarget, state)) {
+        elementSrc
+      } else {
+        elementTarget
+      }
 
     state.elements(elementSrc) match {
       case connector: Connector =>

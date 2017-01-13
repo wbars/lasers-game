@@ -30,18 +30,18 @@ class GameServiceTest extends FunSuite with Matchers {
          |R#***#r
          |******#
          |B*****b""".stripMargin('|'),
-      Seq(((1, 0), (0, 0))),
+      Seq(((1, 0), (0, 1))),
       Seq(((0, 6), (3, 6)), ((2, 6), (3, 6)), ((1, 5), (3, 6)), ((1, 1), (3, 6))),
       Seq((1, 6))
     )
     gameService.states += 1 -> state
 
-    gameService.moveElement(1, (0, 0), (1, 3), Set((1, 0), (1, 6)))
+    gameService.moveElement(1, (0, 1), (1, 3), Set((1, 0), (1, 6)))
     state.beams should have size 2
     all(state.beams) should have('color (Absent))
     state should have('isWinState (false))
 
-    gameService.moveElement(1, (0, 1), (3, 3), Set((3, 0), (3, 6)))
+    gameService.moveElement(1, (0, 0), (3, 3), Set((3, 0), (3, 6)))
     gameService.moveElement(1, (1, 3), (1, 3), Set((1, 0), (1, 6)))
     state.beams should have size 4
     all(state.beams) should not have 'color (Absent)
@@ -61,8 +61,8 @@ class GameServiceTest extends FunSuite with Matchers {
     gameService.state(1).elements((0, 2)).asInstanceOf[Wall] should have('transparent (true))
     gameService.moveElement(1, (0, 0), (0, 2), Set.empty)
 
-    gameService.state(1).elements((0, 2)) shouldBe a [Wall]
-    gameService.state(1).elements((0, 0)) shouldBe a [Connector]
+    gameService.state(1).elements((0, 2)) shouldBe a[Wall]
+    gameService.state(1).elements((0, 0)) shouldBe a[Connector]
   }
 
   test("Deadlock problem should be solved") {
@@ -74,7 +74,7 @@ class GameServiceTest extends FunSuite with Matchers {
          |BA#b""".stripMargin('|'),
       Seq.empty,
       Seq(((3, 2), (4, 3)), ((4, 2), (3, 3))),
-      Seq((3, 3), (4,3))
+      Seq((3, 3), (4, 3))
     )
     gameService.states += 1 -> state
     gameService.moveElement(1, (0, 1), (0, 1), Set((3, 0), (3, 3)))
@@ -103,7 +103,7 @@ class GameServiceTest extends FunSuite with Matchers {
          |BA#b""".stripMargin('|'),
       Seq.empty,
       Seq(((3, 2), (4, 3)), ((4, 2), (3, 3))),
-      Seq((3, 3), (4,3))
+      Seq((3, 3), (4, 3))
     )
     gameService.states += 1 -> state
     gameService.moveElement(1, (0, 1), (0, 1), Set((3, 0), (3, 3)))
@@ -115,5 +115,68 @@ class GameServiceTest extends FunSuite with Matchers {
 
     gameService.moveElement(1, (2, 1), (3, 1), Set.empty)
     assert(gameService.state(1).elements((4, 3)).asInstanceOf[Reciver].isActive)
+  }
+
+  test("Simple move can be achieved") {
+    val state = ElementFactory.fromString(
+      """|A*****
+         |******
+         |******""".stripMargin)
+    gameService.states += 1 -> state
+    gameService.moveElement(1, (0, 0), (2, 5))
+    gameService.state(1).elements(2, 5) shouldBe a[Connector]
+  }
+
+  test("Obstacles should block moving") {
+    val state = ElementFactory.fromString(
+      """|**#**
+         |*#A#*
+         |**#**""".stripMargin)
+    gameService.states += 1 -> state
+    gameService.moveElement(1, (1, 2), (0, 0))
+    gameService.state(1).elements(1, 2) shouldBe a[Connector]
+
+    val state2 = ElementFactory.fromString(
+      """|**A**
+         |*AAA*
+         |**A**""".stripMargin)
+    gameService.states += 1 -> state2
+    gameService.moveElement(1, (1, 2), (0, 0))
+    gameService.state(1).elements(1, 2) shouldBe a[Connector]
+
+    val state3 = ElementFactory.fromString(
+      """|**r**
+         |*BAR*
+         |**b**""".stripMargin)
+    gameService.states += 1 -> state3
+    gameService.moveElement(1, (1, 2), (0, 0))
+    gameService.state(1).elements(1, 2) shouldBe a[Connector]
+
+    gameService.moveElement(1, (1, 2), (0, 4))
+    gameService.state(1).elements(1, 2) shouldBe a[Connector]
+
+    gameService.moveElement(1, (1, 2), (2, 4))
+    gameService.state(1).elements(1, 2) shouldBe a[Connector]
+
+    gameService.moveElement(1, (1, 2), (2, 0))
+    gameService.state(1).elements(1, 2) shouldBe a[Connector]
+  }
+
+  test("Transparent walls should allow moving") {
+    val state = ElementFactory.fromString(
+      """|A#***R
+         |*#***A
+         |*#***r""".stripMargin,
+      Seq.empty,
+      Seq(((0, 1), (2, 5)), ((1, 1), (2, 5)), ((2, 1), (2, 5))),
+      Seq.empty
+    )
+    gameService.states += 1 -> state
+    gameService.moveElement(1, (0, 0), (0, 2))
+    gameService.state(1).elements(0, 0) shouldBe a[Connector]
+
+    gameService.moveElement(1, (1, 5), (1, 5), Set((0, 5), (2, 5)))
+    gameService.moveElement(1, (0, 0), (0, 2))
+    gameService.state(1).elements(0, 2) shouldBe a[Connector]
   }
 }
