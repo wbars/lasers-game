@@ -1,6 +1,8 @@
 package game
 
 object ElementFactory {
+  def createJammer(i: Int, j: Int): Jamer = Jamer(i, j)()
+
   def createWall(x: Int, y: Int): Wall = Wall(x, y)
 
   def createSender(x: Int, y: Int, color: Color): Sender = Sender(x, y, color)()
@@ -22,15 +24,17 @@ object ElementFactory {
         case 'b' => ElementFactory.createReciver(i, j, Blue)
         case '#' => ElementFactory.createWall(i, j)
         case 'A' => ElementFactory.createConnector(i, j)
+        case 'J' => ElementFactory.createJammer(i, j)
       })
     )
     ElementFactory.createState(rows.head.length, rows.length, elems)
   }
 
   def fromString(stateData: String,
-                 beams: Seq[((Int, Int), (Int, Int))],
-                 wires: Seq[((Int, Int), (Int, Int))],
-                 targets: Seq[(Int, Int)]
+                 beams: Map[(Int, Int), (Int, Int)],
+                 wires: Map[(Int, Int), (Int, Int)],
+                 targets: Iterable[(Int, Int)],
+                 jammers: Map[(Int, Int), (Int, Int)] = Map.empty
                 ): State = {
     val state = fromString(stateData)
     beams.foreach(t => state.addBeam(
@@ -53,8 +57,8 @@ object ElementFactory {
        |A***
        |RA#r
        |BA#b""".stripMargin('|'),
-    Seq.empty,
-    Seq(((3, 2), (4, 3)), ((4, 2), (3, 3))),
+    Map.empty,
+    Map((3, 2) -> (4, 3), (4, 2) -> (3, 3)),
     Seq((3, 3), (4, 3))
   )
 }

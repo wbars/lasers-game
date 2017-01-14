@@ -55,6 +55,8 @@ case class Wall(override val x: Int, override val y: Int, wires: mutable.Set[Rec
   override def ch: Char = if (transparent) '*' else '#'
 }
 
+case class Jamer(var x: Int, var y: Int, override val ch: Char = 'J')(var target: Option[Wall] = None) extends Element
+
 case class Connector(var x: Int, var y: Int, override val ch: Char = 'A')(val beams: mutable.Set[Beam] = mutable.Set.empty) extends Colored {
   def color: Color = beams.collectFirst({ case b: Beam if b.color != Absent => b.color }).getOrElse(Absent)
 }

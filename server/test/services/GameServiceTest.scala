@@ -30,8 +30,8 @@ class GameServiceTest extends FunSuite with Matchers {
          |R#***#r
          |******#
          |B*****b""".stripMargin('|'),
-      Seq(((1, 0), (0, 1))),
-      Seq(((0, 6), (3, 6)), ((2, 6), (3, 6)), ((1, 5), (3, 6)), ((1, 1), (3, 6))),
+      Map((1, 0) -> (0, 1)),
+      Map((0, 6) -> (3, 6), (2, 6) -> (3, 6), (1, 5) -> (3, 6), (1, 1) -> (3, 6)),
       Seq((1, 6))
     )
     gameService.states += 1 -> state
@@ -52,8 +52,8 @@ class GameServiceTest extends FunSuite with Matchers {
     val state = ElementFactory.fromString(
       """|A*#
          |RAr""".stripMargin,
-      Seq(((1, 2), (1, 1)), ((1, 0), (1, 1))),
-      Seq(((0, 2), (1, 2))),
+      Map((1, 2) -> (1, 1), (1, 0) -> (1, 1)),
+      Map((0, 2) -> (1, 2)),
       Seq((1, 2)
       )
     )
@@ -72,8 +72,8 @@ class GameServiceTest extends FunSuite with Matchers {
          |****
          |RA#r
          |BA#b""".stripMargin('|'),
-      Seq.empty,
-      Seq(((3, 2), (4, 3)), ((4, 2), (3, 3))),
+      Map.empty,
+      Map((3, 2) -> (4, 3), (4, 2) -> (3, 3)),
       Seq((3, 3), (4, 3))
     )
     gameService.states += 1 -> state
@@ -101,8 +101,8 @@ class GameServiceTest extends FunSuite with Matchers {
          |****
          |RA#r
          |BA#b""".stripMargin('|'),
-      Seq.empty,
-      Seq(((3, 2), (4, 3)), ((4, 2), (3, 3))),
+      Map.empty,
+      Map((3, 2) -> (4, 3), (4, 2) -> (3, 3)),
       Seq((3, 3), (4, 3))
     )
     gameService.states += 1 -> state
@@ -167,8 +167,8 @@ class GameServiceTest extends FunSuite with Matchers {
       """|A#***R
          |*#***A
          |*#***r""".stripMargin,
-      Seq.empty,
-      Seq(((0, 1), (2, 5)), ((1, 1), (2, 5)), ((2, 1), (2, 5))),
+      Map.empty,
+      Map((0, 1) -> (2, 5), (1, 1) -> (2, 5), (2, 1) -> (2, 5)),
       Seq.empty
     )
     gameService.states += 1 -> state
