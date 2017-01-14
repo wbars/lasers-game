@@ -179,4 +179,43 @@ class GameServiceTest extends FunSuite with Matchers {
     gameService.moveElement(1, (0, 0), (0, 2))
     gameService.state(1).elements(0, 2) shouldBe a[Connector]
   }
+
+  test("Jammers should toggle walls transparency") {
+    val state = ElementFactory.fromString(
+      """|J##""".stripMargin
+    )
+    gameService.states += 1 -> state
+
+    all(gameService.state(1).walls) should have('transparent (false))
+
+    gameService.moveElement(1, (0, 0), (0, 0), Set((0, 1)))
+    gameService.state(1).elements((0, 1)).asInstanceOf[Wall] should have('transparent (true))
+    gameService.state(1).elements((0, 2)).asInstanceOf[Wall] should have('transparent (false))
+
+    gameService.moveElement(1, (0, 0), (0, 0), Set((0, 2)))
+    gameService.state(1).elements((0, 1)).asInstanceOf[Wall] should have('transparent (false))
+    gameService.state(1).elements((0, 2)).asInstanceOf[Wall] should have('transparent (true))
+
+    gameService.moveElement(1, (0, 0), (0, 0))
+    all(gameService.state(1).walls) should have('transparent (false))
+  }
+
+  test("Jammers targets should trigger intersecting beams to repaint") {
+    val state = ElementFactory.fromString(
+      """|RA#r
+         |J***""".stripMargin('|'),
+      Map((0, 0) -> (0, 1), (0, 3) -> (0, 1)),
+      Map.empty,
+      Seq((0, 3))
+    )
+    gameService.states += 1 -> state
+
+    gameService.state(1) should have('isWinState (false))
+
+    gameService.moveElement(1, (1, 0), (1, 2), Set((0, 2)))
+    gameService.state(1) should have('isWinState (true))
+
+    gameService.moveElement(1, (1, 2), (1, 2), Set.empty)
+    gameService.state(1) should have('isWinState (false))
+  }
 }

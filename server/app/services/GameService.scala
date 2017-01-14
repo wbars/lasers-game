@@ -50,30 +50,72 @@ class GameService {
     false
   }
 
+  def removeJammer(state: State, jammer: Jammer){
+    state.elements.remove((jammer.x, jammer.y))
+    jammer.target match {
+      case Some(w: Wall) => w.jammers -= jammer
+      case _ =>
+    }
+  }
+
+  def addJammer(position: (Int, Int), target: Option[(Int, Int)], state: State): Jammer = {
+    val jammer = ElementFactory.createJammer(position._1, position._2)
+    target match {
+      case Some(pos) => state.elements(pos) match {
+        case w: Wall =>
+          w.jammers += jammer
+          jammer.target = Some(w)
+        case _ =>
+      }
+      case _ =>
+    }
+    state.elements += position -> jammer
+    jammer
+  }
+
   def moveElement(stateId: Int,
                   elementSrc: (Int, Int), elementTarget: (Int, Int),
                   connections: Set[(Int, Int)] = Set.empty): State = {
     val state = states(stateId)
 
-    def getTargetPos: (Int, Int) =
+    def targetPos: (Int, Int) =
       if (state.elements.contains(elementTarget) || !isPathExists(elementSrc, elementTarget, state)) {
         elementSrc
       } else {
         elementTarget
       }
 
+    def moveConnector(connector: Connector) = {
+      removeConnector(state, connector)
+      val newConnector = addConnector(targetPos, connections, state)
+      state.paintComponent(state.getConnectedComponent(newConnector))
+      state.beamsIntersectsElement(newConnector).foreach(b => state.paintBeamElementsComponents(b))
+      state
+    }
+
+    def moveJammer(jammer: Jammer): State = {
+      def getJammerAffectedBeams(j: Jammer): mutable.Set[Beam] = j.target match {
+        case Some(w: Wall) => state.beamsIntersectsElement(w)
+        case _ => mutable.Set.empty
+      }
+
+      val intersectingBeams: mutable.Set[Beam] = getJammerAffectedBeams(jammer)
+      removeJammer(state, jammer)
+      val newJammer: Jammer = addJammer(targetPos, connections.headOption, state)
+      intersectingBeams ++= getJammerAffectedBeams(newJammer)
+
+      intersectingBeams.foreach(state.paintBeamElementsComponents(_))
+      state
+    }
+
     state.elements(elementSrc) match {
-      case connector: Connector =>
-        removeConcetrator(state, connector)
-        val concetrator = addConcetrator(getTargetPos, connections, state)
-        state.paintComponent(state.getConnectedComponent(concetrator))
-        state.beamsIntersectsElement(concetrator).foreach(b => state.paintBeamElementsComponents(b))
-        state
+      case connector: Connector => moveConnector(connector)
+      case jammer: Jammer => moveJammer(jammer)
       case _ => null
     }
   }
 
-  private def removeConcetrator(state: State, connector: Connector) {
+  private def removeConnector(state: State, connector: Connector) {
     var intersectedBeams = connector.beams.flatMap(state.beamsIntersectsBeam)
     connector.beams.foreach(beam => state.removeBeam(beam))
 
@@ -83,7 +125,7 @@ class GameService {
     intersectedBeams.foreach(b => state.paintBeamElementsComponents(b))
   }
 
-  private def addConcetrator(target: (Int, Int), connections: Set[(Int, Int)], state: State): Connector = {
+  private def addConnector(target: (Int, Int), connections: Set[(Int, Int)], state: State): Connector = {
     def beamAddOrder(element: Element): Int = element match {
       case _: Sender => 1
       case _: Reciver => 3

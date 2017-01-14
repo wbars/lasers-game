@@ -49,13 +49,13 @@ case class Reciver(override val x: Int, override val y: Int, override val color:
 }
 
 
-case class Wall(override val x: Int, override val y: Int, wires: mutable.Set[Reciver] = mutable.Set.empty) extends Element {
-  override def transparent: Boolean = wires.nonEmpty && wires.forall(_.isActive)
+case class Wall(override val x: Int, override val y: Int, wires: mutable.Set[Reciver] = mutable.Set.empty, jammers: mutable.Set[Jammer] = mutable.Set.empty) extends Element {
+  override def transparent: Boolean = jammers.nonEmpty || (wires.nonEmpty && wires.forall(_.isActive))
 
   override def ch: Char = if (transparent) '*' else '#'
 }
 
-case class Jamer(var x: Int, var y: Int, override val ch: Char = 'J')(var target: Option[Wall] = None) extends Element
+case class Jammer(var x: Int, var y: Int, override val ch: Char = 'J')(var target: Option[Wall] = None) extends Element
 
 case class Connector(var x: Int, var y: Int, override val ch: Char = 'A')(val beams: mutable.Set[Beam] = mutable.Set.empty) extends Colored {
   def color: Color = beams.collectFirst({ case b: Beam if b.color != Absent => b.color }).getOrElse(Absent)
@@ -77,6 +77,9 @@ class State(val width: Int, val height: Int,
   def beamsIntersectsElement(element: Element): mutable.Set[Beam] = beams.filter(State.isBeamIntersectsElement(element, _))
 
   def isValid = true
+
+  def jammers: Iterable[Jammer] = elements.values.collect({case j: Jammer => j})
+  def walls: Iterable[Wall] = elements.values.collect({case w: Wall => w})
 
   override def toString: String = {
     def buildRow(i: Int) = {

@@ -1,7 +1,9 @@
 package game
 
+import scala.collection.mutable
+
 object ElementFactory {
-  def createJammer(i: Int, j: Int): Jamer = Jamer(i, j)()
+  def createJammer(i: Int, j: Int): Jammer = Jammer(i, j)()
 
   def createWall(x: Int, y: Int): Wall = Wall(x, y)
 
@@ -46,6 +48,19 @@ object ElementFactory {
       state.elements(t._1).asInstanceOf[Wall].wires += state.elements(t._2).asInstanceOf[Reciver]
       state.elements(t._2).asInstanceOf[Reciver].wires += state.elements(t._1).asInstanceOf[Wall]
     })
+
+    state.jammers.foreach(_.target = None)
+    state.walls.foreach(_.jammers.clear())
+    jammers.foreach({case (jammer, target) => state.elements(jammer) match {
+      case j: Jammer => state.elements(target) match {
+        case w: Wall =>
+          j.target = Some(w)
+          w.jammers += j
+        case _ =>
+      }
+      case _ =>
+    }})
+
     targets.foreach(state.elements(_).asInstanceOf[Reciver].isTarget = true)
 
     state
