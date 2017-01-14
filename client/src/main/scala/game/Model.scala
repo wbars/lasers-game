@@ -47,7 +47,6 @@ object Model {
     val $elem = $(elem)
 
     def toggleConnection(connection: (Int, Int)) = {
-      dom.console.log("Toggled")
       if (connections.contains(connection)) {
         connections -= connection
         $elem.removeClass(GameGridStyleSheet.selected.name)
@@ -69,19 +68,15 @@ object Model {
       grabbed = elem
     }
 
-    dom.console.log(elem.textContent)
     if (grabbed == null && isConcetrator(elem)) {
       grabElement()
     } else if (grabbed != null) {
       val elemPos = getUnpackedPositions(elem.id)
-      dom.console.log(elem.textContent)
       elem.textContent match {
         case "" => moveElement(elemPos)
         case "A" if elem == grabbed => moveElement(elemPos)
         case "R" | "r" | "B" | "b" | "A" => toggleConnection(elemPos)
       }
-    } else {
-      dom.console.log("Else")
     }
   }
 
