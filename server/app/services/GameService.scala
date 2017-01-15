@@ -50,7 +50,7 @@ class GameService {
     false
   }
 
-  def removeJammer(state: State, jammer: Jammer){
+  def removeJammer(state: State, jammer: Jammer) {
     state.elements.remove((jammer.x, jammer.y))
     jammer.target match {
       case Some(w: Wall) => w.jammers -= jammer
@@ -71,6 +71,39 @@ class GameService {
     }
     state.elements += position -> jammer
     jammer
+  }
+
+  def refreshJammer(jammer: Jammer, state: State) {
+    jammer.active = jammer.target match {
+      case Some(w: Wall) => !state.isLineIntersectWall(w, jammer)
+      case _ => false
+    }
+  }
+
+  def getBlockingJammers(jammer: Jammer, state: State): Set[Jammer] = jammer.target match {
+    case Some(wall: Wall) => state.jammers.filter(j => j.target match {
+      case Some(w: Wall) => State.isLineIntersectsElement(new Line(j, w), wall)
+      case _ => false
+    }).toSet
+    case _ => Set.empty
+  }
+
+  def refreshJammersWithPropagating(jammers: mutable.Iterable[Jammer], state: State) {
+    val affectedJammers = mutable.Queue[Jammer]()
+    val visitedJammers = mutable.Set[Jammer]()
+    jammers.foreach(affectedJammers.enqueue(_))
+    visitedJammers ++= jammers
+
+    while (affectedJammers.nonEmpty) {
+      val jammer = affectedJammers.dequeue()
+      val currentAffectedJammers: Set[Jammer] = getBlockingJammers(jammer, state)
+      refreshJammer(jammer, state)
+      currentAffectedJammers.filter(!visitedJammers.contains(_))
+        .foreach(j => {
+          refreshJammer(j, state)
+          visitedJammers += j
+        })
+    }
   }
 
   def moveElement(stateId: Int,
@@ -100,11 +133,23 @@ class GameService {
       }
 
       val intersectingBeams: mutable.Set[Beam] = getJammerAffectedBeams(jammer)
-      removeJammer(state, jammer)
-      val newJammer: Jammer = addJammer(targetPos, connections.headOption, state)
-      intersectingBeams ++= getJammerAffectedBeams(newJammer)
+      val affectedJammers: mutable.Set[Jammer] = mutable.Set(getBlockingJammers(jammer, state).toList:_*)
 
-      intersectingBeams.foreach(state.paintBeamElementsComponents(_))
+      removeJammer(state, jammer)
+
+      def target = connections.headOption match {
+        case Some(pos) => state.elements.get(pos) match {
+          case Some(_: Wall) => Some(pos)
+          case _ => None
+        }
+        case _ => None
+      }
+
+      val newJammer: Jammer = addJammer(targetPos, target, state)
+      refreshJammer(newJammer, state)
+
+      (intersectingBeams ++ getJammerAffectedBeams(newJammer)).foreach(state.paintBeamElementsComponents(_))
+      refreshJammersWithPropagating(affectedJammers ++ getBlockingJammers(newJammer, state), state)
       state
     }
 

@@ -108,13 +108,13 @@ class GameServiceTest extends FunSuite with Matchers {
     gameService.states += 1 -> state
     gameService.moveElement(1, (0, 1), (0, 1), Set((3, 0), (3, 3)))
     gameService.moveElement(1, (4, 1), (4, 1), Set((4, 0), (4, 3)))
-    assert(gameService.state(1).elements((4, 3)).asInstanceOf[Reciver].isActive)
+    assert(gameService.state(1).elements((4, 3)).asInstanceOf[Reciver].active)
 
     gameService.moveElement(1, (3, 1), (2, 1), Set.empty)
-    assert(!gameService.state(1).elements((4, 3)).asInstanceOf[Reciver].isActive)
+    assert(!gameService.state(1).elements((4, 3)).asInstanceOf[Reciver].active)
 
     gameService.moveElement(1, (2, 1), (3, 1), Set.empty)
-    assert(gameService.state(1).elements((4, 3)).asInstanceOf[Reciver].isActive)
+    assert(gameService.state(1).elements((4, 3)).asInstanceOf[Reciver].active)
   }
 
   test("Simple move can be achieved") {
@@ -182,21 +182,22 @@ class GameServiceTest extends FunSuite with Matchers {
 
   test("Jammers should toggle walls transparency") {
     val state = ElementFactory.fromString(
-      """|J##""".stripMargin
+      """|J*#
+         |**#""".stripMargin
     )
     gameService.states += 1 -> state
 
     all(gameService.state(1).walls) should have('transparent (false))
 
-    gameService.moveElement(1, (0, 0), (0, 0), Set((0, 1)))
-    gameService.state(1).elements((0, 1)).asInstanceOf[Wall] should have('transparent (true))
-    gameService.state(1).elements((0, 2)).asInstanceOf[Wall] should have('transparent (false))
-
     gameService.moveElement(1, (0, 0), (0, 0), Set((0, 2)))
-    gameService.state(1).elements((0, 1)).asInstanceOf[Wall] should have('transparent (false))
     gameService.state(1).elements((0, 2)).asInstanceOf[Wall] should have('transparent (true))
+    gameService.state(1).elements((1, 2)).asInstanceOf[Wall] should have('transparent (false))
 
-    gameService.moveElement(1, (0, 0), (0, 0))
+    gameService.moveElement(1, (0, 0), (1, 0), Set((1, 2)))
+    gameService.state(1).elements((0, 2)).asInstanceOf[Wall] should have('transparent (false))
+    gameService.state(1).elements((1, 2)).asInstanceOf[Wall] should have('transparent (true))
+
+    gameService.moveElement(1, (1, 0), (1, 0))
     all(gameService.state(1).walls) should have('transparent (false))
   }
 
@@ -217,5 +218,20 @@ class GameServiceTest extends FunSuite with Matchers {
 
     gameService.moveElement(1, (1, 2), (1, 2), Set.empty)
     gameService.state(1) should have('isWinState (false))
+  }
+
+  test("Jammers should activate targets through transparent walls") {
+    val state = ElementFactory.fromString(
+      """|J##
+         |*J*""".stripMargin
+    )
+    gameService.states += 1 -> state
+
+    gameService.moveElement(1, (0, 0), (0, 0), Set((0, 2)))
+    all(gameService.state(1).walls) should have('transparent (false))
+
+    gameService.moveElement(1, (1, 1), (1, 1), Set((0, 1)))
+    all(gameService.state(1).walls) should have('transparent (true))
+
   }
 }
