@@ -67,8 +67,8 @@ object ElementFactory {
   }
 
   def defaultState: State = fromString(
-    """|****
-       |****
+    """|#**J
+       |##**
        |A***
        |RA#r
        |BA#b""".stripMargin('|'),

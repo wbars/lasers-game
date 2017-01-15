@@ -13,17 +13,26 @@ import scala.scalajs.js
 import scalatags.JsDom.all.{id, _}
 import scalatags.JsDom.tags2.section
 
+trait SelectedElement
+
+case class Connector() extends SelectedElement
+
+case class Jammer() extends SelectedElement
+
 object Model {
   var connections: Set[(Int, Int)] = Set.empty
   var srcPoint: (Int, Int) = (0, 0)
   var targetPoint: (Int, Int) = (0, 0)
+  var selectedElement: Option[SelectedElement] = None
 
-  def stateChanged(selectedElem: Element): Boolean = grabbed != null || (grabbed == null && isConcetrator(selectedElem))
+  def stateChanged(selectedElem: Element): Boolean = grabbed != null || (grabbed == null && (isConcetrator(selectedElem) || isJammer(selectedElem)))
 
   var itemGrabbed: Boolean = false
   var grabbed: Element = _
 
   def isConcetrator(elem: Element): Boolean = elem.textContent == "A"
+
+  def isJammer(elem: Element): Boolean = elem.textContent == "J"
 
   def getPackedPosition(i: Int, j: Int): String = s"${i}_$j"
 
@@ -31,7 +40,7 @@ object Model {
     case Array(i: String, j: String) => (i.toInt, j.toInt)
   }
 
-  def changeState(i: Int, j: Int, width: Int, height: Int): (Element) => String = (elem: Element) => {
+  def changeState(i: Int, j: Int, width: Int, height: Int, elem: Element) {
     changeTable(elem)
     getStateFromTable(width, height)
   }
@@ -60,6 +69,7 @@ object Model {
       targetPoint = elemPos
       $(grabbed).removeClass(GameGridStyleSheet.active.name)
       grabbed = null
+      selectedElement = None
     }
 
     def grabElement() {
@@ -68,14 +78,46 @@ object Model {
       grabbed = elem
     }
 
-    if (grabbed == null && isConcetrator(elem)) {
-      grabElement()
+    def moveConnector(pos: (Int, Int)) = elem.textContent match {
+      case "" => moveElement(pos)
+      case "A" if elem == grabbed => moveElement(pos)
+      case "R" | "r" | "B" | "b" | "A" => toggleConnection(pos)
+    }
+
+    def moveJammer(pos: (Int, Int)) = if ($elem.hasClass(GameGridStyleSheet.wall.name)) {
+      connections = Set.empty
+      if ($elem.hasClass(GameGridStyleSheet.active.name)) {
+        $elem.removeClass(GameGridStyleSheet.active.name)
+      } else {
+        $(s".${GameGridStyleSheet.active.name}.${GameGridStyleSheet.wall.name}").removeClass(GameGridStyleSheet.active.name)
+        $elem.addClass(GameGridStyleSheet.active.name)
+        connections += pos
+      }
+
+    } else {
+      elem.textContent match {
+        case "" => moveElement(pos)
+        case "J" if elem == grabbed => moveElement(pos)
+      }
+    }
+
+
+    if (grabbed == null) {
+      if (isConcetrator(elem)) {
+        selectedElement = Some(Connector())
+      } else if (isJammer(elem)) {
+        selectedElement = Some(Jammer())
+      }
+
+      selectedElement match {
+        case Some(_) => grabElement()
+      }
     } else if (grabbed != null) {
       val elemPos = getUnpackedPositions(elem.id)
-      elem.textContent match {
-        case "" => moveElement(elemPos)
-        case "A" if elem == grabbed => moveElement(elemPos)
-        case "R" | "r" | "B" | "b" | "A" => toggleConnection(elemPos)
+      selectedElement match {
+        case Some(_: Connector) => moveConnector(elemPos)
+        case Some(_: Jammer) => moveJammer(elemPos)
+        case _ =>
       }
     }
   }

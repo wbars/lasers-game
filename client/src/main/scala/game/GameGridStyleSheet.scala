@@ -40,4 +40,8 @@ object GameGridStyleSheet extends CascadingStyleSheet {
     lineHeight := "1px",
     position := "absolute"
   )
+
+  val wall: Cls = cls(
+    fontWeight := "bold"
+  )
 }

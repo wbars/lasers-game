@@ -81,11 +81,12 @@ object GameJS {
 
   private def drawBeams(game: Protocol.Game) = {
     $("." + GameGridStyleSheet.beam.name).remove()
-    game.beams.foreach({case (beam1, beam2, color) => drawLine(
+    game.beams.foreach({ case (beam1, beam2, color) => drawLine(
       dom.document.getElementById(Model.getPackedPosition(beam1.tupled._1, beam1.tupled._2)),
       dom.document.getElementById(Model.getPackedPosition(beam2.tupled._1, beam2.tupled._2)),
       color
-    )})
+    )
+    })
   }
 
   def gameBody(game: Protocol.Game): TypedTag[Div] = {
@@ -109,7 +110,7 @@ object GameJS {
     def updateGameState(e: Element) = {
       val positions = Model.getUnpackedPositions(e.id)
       if (Model.stateChanged(e)) {
-        Model.changeState(positions._1, positions._2, rows(0).length, rows.length)(e)
+        Model.changeState(positions._1, positions._2, rows(0).length, rows.length, e)
         if (Model.isChangingStateComplete) {
           updateRemoteState()
           Model.reset()
@@ -125,6 +126,12 @@ object GameJS {
             e.preventDefault()
             updateGameState(e.srcElement)
         },
+        cls := (
+          rows(i)(j) match {
+            case '#' => GameGridStyleSheet.wall.name
+            case _ => ""
+          }
+          ),
         rows(i)(j) match {
           case '*' => ""
           case ch => ch.toString
